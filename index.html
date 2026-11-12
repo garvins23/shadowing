@@ -1,0 +1,589 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#f5f6fa">
+<title>쉐도잉 연습장</title>
+<style>
+/* Layout: one phone column. Video on top, the sentence card under it, a large record button, then the sentence list. Fixed tab bar at the bottom. */
+:root{
+  --bg:#f5f6fa; --surface:#ffffff; --ink:#161a2b; --muted:#646b85; --line:#dfe2ec;
+  --accent:#2f47c9; --accent-ink:#ffffff; --rec:#d6334a;
+  --good:#12805c; --good-bg:#dcf3ea; --warn:#93600a; --warn-bg:#fbeccb; --bad:#b3263a; --bad-bg:#fbdfe3;
+  --radius:14px;
+  --font:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR","Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#10121c; --surface:#1a1d2c; --ink:#eceef7; --muted:#9aa1bb; --line:#2c3046;
+  --accent:#8496ff; --accent-ink:#0d1020; --rec:#ff6077;
+  --good:#5fd6a8; --good-bg:#143a2e; --warn:#f2c160; --warn-bg:#40300f; --bad:#ff8695; --bad-bg:#47161f;
+  color-scheme:dark;
+}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.55 var(--font);-webkit-text-size-adjust:100%;
+  padding:env(safe-area-inset-top,0px) max(16px,env(safe-area-inset-right,0px)) calc(84px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+main{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:14px;padding-block:14px}
+[hidden]{display:none!important}
+h1{font-size:20px;margin:0;letter-spacing:-.01em}
+h2{font-size:15px;margin:0;color:var(--muted);font-weight:600}
+p{margin:0}
+.sub{color:var(--muted);font-size:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;gap:12px}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 12px;min-height:44px}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+button.on{border-color:var(--accent);color:var(--accent);font-weight:600}
+input,textarea,select{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 12px}
+textarea{min-height:150px;resize:vertical;font-size:14px}
+label{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600}
+label .sub{font-weight:400}
+
+#playerBox{aspect-ratio:16/9;background:#000;border-radius:var(--radius);overflow:hidden}
+#playerBox iframe,#player{width:100%;height:100%;display:block;border:0}
+
+.meta{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+#sentence{font-size:21px;line-height:1.5;letter-spacing:-.005em;min-height:2.2em;word-break:break-word}
+#sentence .w{border-radius:5px;padding:1px 3px;cursor:pointer}
+.g{background:var(--good-bg);color:var(--good)}
+.m{background:var(--warn-bg);color:var(--warn);text-decoration:underline dotted}
+.b{background:var(--bad-bg);color:var(--bad);text-decoration:underline wavy}
+.x{color:var(--muted);text-decoration:line-through}
+#wordInfo{font-size:14px;color:var(--muted);min-height:1.5em}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row>button{flex:1 1 0;min-width:0;white-space:nowrap}
+
+#recBtn{align-self:center;width:112px;height:112px;border-radius:50%;border:0;background:var(--rec);color:#fff;font-weight:700;font-size:16px;line-height:1.25}
+#recBtn.live{box-shadow:0 0 0 8px color-mix(in srgb,var(--rec) 25%,transparent);animation:pulse 1.2s ease-in-out infinite}
+#recBtn:disabled{opacity:.6}
+@keyframes pulse{50%{box-shadow:0 0 0 16px color-mix(in srgb,var(--rec) 10%,transparent)}}
+@media (prefers-reduced-motion:reduce){#recBtn.live{animation:none}}
+#recHint{text-align:center;font-size:14px;color:var(--muted)}
+
+#total{font-size:40px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.bars{display:grid;grid-template-columns:auto 1fr auto;gap:8px 10px;align-items:center;font-size:14px}
+.bar{height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:4px}
+.bars b{font-variant-numeric:tabular-nums;font-weight:600;text-align:right}
+audio{width:100%}
+
+.list{display:flex;flex-direction:column;gap:6px}
+.item{display:flex;gap:10px;align-items:center;text-align:left;width:100%}
+.item .n{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums;flex:0 0 auto;width:2em}
+.item .t{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px}
+.item.cur{border-color:var(--accent)}
+.chip{flex:0 0 auto;font-size:12px;font-weight:700;border-radius:20px;padding:2px 8px;font-variant-numeric:tabular-nums}
+.del{flex:0 0 auto;min-height:36px;padding:6px 10px;font-size:13px;color:var(--bad)}
+ol.help{margin:0;padding-left:1.3em;font-size:14px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:flex;justify-content:center;
+  padding:6px max(16px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));z-index:5}
+nav div{display:flex;gap:6px;width:100%;max-width:560px}
+nav button{flex:1;border:0;background:none;font-size:14px;color:var(--muted);font-weight:600}
+nav button[aria-current="page"]{color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent)}
+#toast{position:fixed;left:16px;right:16px;bottom:calc(92px + env(safe-area-inset-bottom,0px));margin:0 auto;max-width:520px;background:var(--ink);color:var(--bg);
+  padding:12px 14px;border-radius:12px;font-size:14px;z-index:9}
+</style>
+<script defer src="https://cdn.jsdelivr.net/npm/microsoft-cognitiveservices-speech-sdk@1.36.0/distrib/browser/microsoft.cognitiveservices.speech.sdk.bundle-min.js"
+  onerror="var s=document.createElement('script');s.src='https://unpkg.com/microsoft-cognitiveservices-speech-sdk@1.36.0/distrib/browser/microsoft.cognitiveservices.speech.sdk.bundle-min.js';document.head.appendChild(s)"></script>
+</head>
+<body>
+<main>
+
+<!-- 연습 -->
+<section id="v-practice" style="display:contents">
+  <header>
+    <h1 id="vidTitle">쉐도잉 연습장</h1>
+    <p class="sub" id="vidSub"></p>
+  </header>
+  <div id="playerBox" hidden><div id="player"></div></div>
+
+  <div class="card">
+    <div class="meta"><span id="segPos"></span><span id="segBest"></span></div>
+    <p id="sentence" lang="en"></p>
+    <p id="wordInfo"></p>
+    <div class="row">
+      <button id="prevBtn">이전</button>
+      <button id="playBtn" class="primary">듣기</button>
+      <button id="nextBtn">다음</button>
+    </div>
+    <div class="row">
+      <button id="rateBtn">속도 1.0</button>
+      <button id="loopBtn">반복</button>
+      <button id="simBtn">동시에 말하기</button>
+    </div>
+  </div>
+
+  <button id="recBtn">따라<br>말하기</button>
+  <p id="recHint">누르고 말한 뒤, 다시 눌러 멈추세요.</p>
+
+  <div class="card" id="resultCard" hidden>
+    <h2>이번 점수</h2>
+    <div id="total">0</div>
+    <div class="bars" id="bars"></div>
+    <p class="sub" id="extra"></p>
+    <audio id="myAudio" controls hidden></audio>
+  </div>
+
+  <div id="segListWrap">
+    <h2 style="margin:6px 0 8px">문장 목록</h2>
+    <div class="list" id="segList"></div>
+  </div>
+</section>
+
+<!-- 영상 -->
+<section id="v-library" style="display:contents" hidden>
+  <header><h1>영상</h1><p class="sub">연습할 유튜브 영상을 추가하고 고릅니다.</p></header>
+  <div class="list" id="vidList"></div>
+
+  <form class="card" id="addForm">
+    <h2>새 영상 추가</h2>
+    <label>유튜브 주소
+      <input id="fUrl" inputmode="url" placeholder="https://youtu.be/...">
+    </label>
+    <label>제목 <span class="sub">비워두면 영상 제목을 가져옵니다</span>
+      <input id="fTitle" placeholder="예: TED-Ed, 6 Minute English">
+    </label>
+    <label>스크립트 <span class="sub">시간이 붙은 스크립트를 그대로 붙여넣으세요</span>
+      <textarea id="fText" placeholder="0:01&#10;hello and welcome back&#10;0:04&#10;today we're talking about..."></textarea>
+    </label>
+    <label>문장 길이
+      <select id="fLen">
+        <option value="9">짧게 (9단어 안팎)</option>
+        <option value="14" selected>보통 (14단어 안팎)</option>
+        <option value="22">길게 (22단어 안팎)</option>
+      </select>
+    </label>
+    <button class="primary" type="submit">추가하고 연습 시작</button>
+    <ol class="help">
+      <li>PC 유튜브에서 영상 설명란을 펼치고 "스크립트 표시"를 누릅니다.</li>
+      <li>스크립트 전체를 드래그해 복사한 뒤 여기에 붙여넣습니다.</li>
+      <li>스크립트가 없으면 주소만 넣어도 됩니다. 영상을 들으며 자유롭게 따라 말하고 점수를 받습니다.</li>
+      <li>주소 없이 영어 문장만 붙여넣으면 기기 음성으로 읽어줍니다.</li>
+    </ol>
+  </form>
+</section>
+
+<!-- 설정 -->
+<section id="v-settings" style="display:contents" hidden>
+  <header><h1>설정</h1><p class="sub">키는 이 기기의 브라우저에만 저장되고, 발음 분석 때 Azure로만 전송됩니다.</p></header>
+  <form class="card" id="setForm">
+    <label>Azure Speech 키
+      <input id="sKey" type="password" autocomplete="off" placeholder="KEY 1 값">
+    </label>
+    <label>지역 (Region) <span class="sub">Azure 포털의 "키 및 엔드포인트"에 있는 위치/지역 값</span>
+      <input id="sRegion" autocapitalize="none" autocomplete="off" placeholder="예: koreacentral">
+    </label>
+    <button class="primary" type="submit">저장</button>
+    <p class="sub" id="setState"></p>
+  </form>
+  <div class="card">
+    <h2>점수 색 읽는 법</h2>
+    <p style="font-size:15px" lang="en"><span class="g">good</span> 80점 이상 &nbsp; <span class="m">okay</span> 60~79점 &nbsp; <span class="b">weak</span> 60점 미만 &nbsp; <span class="x">skipped</span> 말하지 않음</p>
+    <p class="sub">단어를 누르면 그 단어의 점수가 보입니다.</p>
+  </div>
+</section>
+
+</main>
+
+<nav><div>
+  <button data-tab="practice" aria-current="page">연습</button>
+  <button data-tab="library">영상</button>
+  <button data-tab="settings">설정</button>
+</div></nav>
+<div id="toast" role="status" hidden></div>
+
+<script>
+const $=id=>document.getElementById(id);
+const LS='shadowing.v1';
+const SAMPLE_TEXT=[
+  "I've been meaning to ask you about that for a while.",
+  "It turned out to be a lot harder than I expected.",
+  "If I had known earlier, I would have done it differently.",
+  "Could you walk me through how this actually works?",
+  "The more I practice, the more natural it starts to feel.",
+  "Honestly, I'm not sure whether that's the right approach."
+];
+let S={key:'',region:'',videos:[],cur:0,seg:0,rate:1,loop:false,sim:false};
+
+function load(){
+  try{const j=JSON.parse(localStorage.getItem(LS));if(j&&typeof j==='object')Object.assign(S,j);}catch(e){}
+  if(!Array.isArray(S.videos)||!S.videos.length){
+    S.videos=[{id:'sample',vid:'',title:'예시 문장 (영상 없음)',segs:SAMPLE_TEXT.map(t=>({t,s:null,e:null})),best:{}}];
+    S.cur=0;S.seg=0;
+  }
+  clamp();
+}
+function save(){try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}}
+function clamp(){
+  S.cur=Math.min(Math.max(0,S.cur|0),S.videos.length-1);
+  const n=cv().segs.length;S.seg=n?Math.min(Math.max(0,S.seg|0),n-1):0;
+}
+const cv=()=>S.videos[S.cur];
+const free=()=>cv().segs.length===0;
+const curSeg=()=>free()?{t:'',s:null,e:null}:cv().segs[S.seg];
+
+let toastT=null;
+function toast(msg){const t=$('toast');t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,4200);}
+
+/* ---------- tabs ---------- */
+function show(tab){
+  for(const k of ['practice','library','settings'])$('v-'+k).hidden=k!==tab;
+  document.querySelectorAll('nav button').forEach(b=>b.dataset.tab===tab?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current'));
+  if(tab!=='practice')stopPlay();
+  if(tab==='library')renderLibrary();
+  if(tab==='settings'){$('sKey').value=S.key;$('sRegion').value=S.region;setState();}
+  window.scrollTo(0,0);
+}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>show(b.dataset.tab));
+
+/* ---------- transcript parsing ---------- */
+function ytId(u){
+  const m=String(u).trim().match(/(?:youtu\.be\/|[?&]v=|\/shorts\/|\/embed\/|\/live\/)([\w-]{11})/);
+  if(m)return m[1];
+  return /^[\w-]{11}$/.test(String(u).trim())?String(u).trim():'';
+}
+function toSec(ts){return ts.split(':').map(Number).reduce((a,b)=>a*60+b,0);}
+function clean(t){return t.replace(/\[[^\]]*\]|\([^)]*\)|>>+|♪/g,' ').replace(/\s+/g,' ').trim();}
+const wc=t=>t.split(/\s+/).filter(Boolean).length;
+function parseTranscript(raw,maxWords){
+  const lines=String(raw).replace(/\r/g,'').split('\n');
+  const re=/^\s*\[?((?:\d{1,2}:)?\d{1,2}:\d{2})\]?\s*(.*)$/;
+  const caps=[];let hasTime=false;
+  for(const ln of lines){
+    const m=ln.match(re);
+    if(m){hasTime=true;caps.push({s:toSec(m[1]),t:m[2]||''});}
+    else if(caps.length&&hasTime)caps[caps.length-1].t+=' '+ln;
+    else caps.push({s:null,t:ln});
+  }
+  if(!hasTime){
+    const text=clean(lines.join(' '));
+    if(!text)return[];
+    const parts=text.match(/[^.!?]+[.!?]+["')\]]*|[^.!?]+$/g)||[text];
+    const out=[];
+    for(let p of parts){p=p.trim();if(!p)continue;
+      const w=p.split(/\s+/);
+      for(let i=0;i<w.length;i+=maxWords+4)out.push({t:w.slice(i,i+maxWords+4).join(' '),s:null,e:null});}
+    return out;
+  }
+  const cc=caps.map(c=>({s:c.s,t:clean(c.t)})).filter(c=>c.t&&c.s!=null);
+  const segs=[];let acc=null;
+  cc.forEach((c,i)=>{
+    if(!acc)acc={s:c.s,t:c.t};else acc.t+=' '+c.t;
+    const n=wc(acc.t);
+    if((/[.!?]["')]?$/.test(acc.t)&&n>=4)||n>=maxWords){
+      const nx=cc[i+1];
+      const est=c.s+Math.max(4,wc(c.t)*0.7);
+      acc.e=nx?Math.min(nx.s,est):est;
+      segs.push(acc);acc=null;
+    }
+  });
+  if(acc){acc.e=acc.s+Math.max(3,wc(acc.t)*0.45);segs.push(acc);}
+  segs.forEach(g=>{if(g.e<=g.s)g.e=g.s+3;});
+  return segs;
+}
+
+/* ---------- YouTube player ---------- */
+let yt=null,ytReady=false,ytVid='',ytWant='',ytTimer=null,ytApi=null,playing=false;
+function loadYT(){
+  if(window.YT&&YT.Player)return Promise.resolve();
+  if(!ytApi)ytApi=new Promise((res,rej)=>{
+    window.onYouTubeIframeAPIReady=res;
+    const s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';
+    s.onerror=()=>{ytApi=null;rej(new Error('yt'));};document.head.appendChild(s);
+  });
+  return ytApi;
+}
+async function mountPlayer(){
+  const vid=cv().vid;ytWant=vid;
+  $('playerBox').hidden=!vid;
+  if(!vid){if(yt&&ytReady){try{yt.pauseVideo();}catch(e){}}return;}
+  try{await loadYT();}catch(e){toast('유튜브 플레이어를 불러오지 못했어요. 인터넷 연결을 확인하세요.');return;}
+  if(yt){if(ytReady&&ytVid!==ytWant){ytVid=ytWant;yt.cueVideoById(ytWant);}return;}
+  ytVid=vid;
+  yt=new YT.Player('player',{videoId:vid,playerVars:{playsinline:1,rel:0},events:{
+    onReady:()=>{ytReady=true;if(ytVid!==ytWant&&ytWant){ytVid=ytWant;yt.cueVideoById(ytWant);}fillTitle();},
+    onStateChange:e=>{if(e.data===1)fillTitle();if(free())setPlaying(e.data===1);},
+    onError:()=>toast('이 영상은 재생할 수 없어요. 퍼가기가 막힌 영상일 수 있습니다.')
+  }});
+}
+function fillTitle(){
+  const v=cv();if(!v.vid||v.title||!yt||!yt.getVideoData)return;
+  try{const t=yt.getVideoData().title;if(t){v.title=t;save();renderHead();}}catch(e){}
+}
+function setPlaying(p){playing=p;$('playBtn').textContent=p?'정지':(free()?'재생':'듣기');}
+function stopPlay(){
+  clearInterval(ytTimer);ytTimer=null;
+  try{if(yt&&ytReady)yt.pauseVideo();}catch(e){}
+  try{speechSynthesis.cancel();}catch(e){}
+  setPlaying(false);
+}
+function playSeg(){
+  const v=cv(),g=curSeg();
+  if(playing){stopPlay();return;}
+  if(v.vid){
+    if(!ytReady){toast('영상을 준비하는 중이에요. 잠시 뒤 다시 눌러주세요.');return;}
+    try{yt.setPlaybackRate(S.rate);}catch(e){}
+    if(g.s==null){yt.playVideo();setPlaying(true);return;}
+    const from=Math.max(0,g.s-0.15);
+    yt.seekTo(from,true);yt.playVideo();setPlaying(true);
+    clearInterval(ytTimer);
+    ytTimer=setInterval(()=>{
+      let t=0;try{t=yt.getCurrentTime();}catch(e){}
+      if(t>=g.e){
+        if(S.loop&&!rec){yt.seekTo(from,true);}
+        else{clearInterval(ytTimer);ytTimer=null;yt.pauseVideo();setPlaying(false);}
+      }
+    },100);
+    return;
+  }
+  if(!g.t)return;
+  if(!('speechSynthesis' in window)){toast('이 브라우저는 음성 읽기를 지원하지 않아요.');return;}
+  const say=()=>{
+    const u=new SpeechSynthesisUtterance(g.t);u.lang='en-US';u.rate=S.rate;
+    u.onend=()=>{if(S.loop&&playing&&!rec)setTimeout(()=>{if(playing)say();},500);else setPlaying(false);};
+    u.onerror=()=>setPlaying(false);
+    speechSynthesis.speak(u);
+  };
+  speechSynthesis.cancel();setPlaying(true);say();
+}
+function step(d){
+  if(free()){
+    if(cv().vid&&ytReady){try{yt.seekTo(Math.max(0,yt.getCurrentTime()+d*5),true);}catch(e){}}
+    return;
+  }
+  const n=cv().segs.length;const i=Math.min(n-1,Math.max(0,S.seg+d));
+  if(i!==S.seg)goSeg(i);
+}
+function goSeg(i){stopPlay();S.seg=i;save();lastResult=null;renderPractice();}
+
+/* ---------- recording + Azure pronunciation assessment ---------- */
+let rec=null,lastResult=null,audioUrl=null;
+function parseResult(res){
+  const p=SpeechSDK.PronunciationAssessmentResult.fromResult(res);
+  const words=((p.detailResult&&p.detailResult.Words)||[]).map(w=>({
+    w:w.Word,a:(w.PronunciationAssessment&&w.PronunciationAssessment.AccuracyScore)||0,
+    err:(w.PronunciationAssessment&&w.PronunciationAssessment.ErrorType)||'None'}));
+  return{acc:p.accuracyScore,flu:p.fluencyScore,comp:p.completenessScore,pron:p.pronunciationScore,pros:p.prosodyScore,words};
+}
+async function startRec(){
+  if(!S.key||!S.region){toast('설정에서 Azure 키와 지역을 먼저 입력하세요.');show('settings');return;}
+  if(!window.SpeechSDK){toast('발음 분석 모듈을 불러오지 못했어요. 인터넷 연결을 확인하고 새로고침하세요.');return;}
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){toast('마이크를 쓸 수 없어요. https 주소로 열었는지 확인하세요.');return;}
+  stopPlay();
+  let stream;
+  try{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});}
+  catch(e){toast('마이크 권한이 필요해요. 브라우저의 사이트 설정에서 마이크를 허용해 주세요.');return;}
+  const g=curSeg();
+  let r;
+  try{
+    const cfg=SpeechSDK.SpeechConfig.fromSubscription(S.key.trim(),S.region.trim().toLowerCase().replace(/\s+/g,''));
+    cfg.speechRecognitionLanguage='en-US';
+    try{cfg.setProperty(SpeechSDK.PropertyId.Speech_SegmentationSilenceTimeoutMs,'1500');}catch(e){}
+    r=new SpeechSDK.SpeechRecognizer(cfg,SpeechSDK.AudioConfig.fromStreamInput(stream));
+    const pa=new SpeechSDK.PronunciationAssessmentConfig(g.t||'',
+      SpeechSDK.PronunciationAssessmentGradingSystem.HundredMark,
+      SpeechSDK.PronunciationAssessmentGranularity.Phoneme,!!g.t);
+    try{pa.enableProsodyAssessment=true;}catch(e){}
+    pa.applyTo(r);
+  }catch(e){stream.getTracks().forEach(t=>t.stop());toast('Azure 설정을 확인하세요: '+(e.message||e));return;}
+
+  const me=rec={stream,r,results:[],err:null,ref:g.t,idx:S.seg,vidKey:cv().id,free:free(),done:false,mr:null,chunks:[],timer:null};
+  r.recognized=(_,e)=>{
+    try{if(e.result.reason===SpeechSDK.ResultReason.RecognizedSpeech&&e.result.text)me.results.push(parseResult(e.result));}catch(x){}
+  };
+  r.canceled=(_,e)=>{if(e.reason===SpeechSDK.CancellationReason.Error){me.err=e.errorDetails||'알 수 없는 오류';finish(me);}};
+  r.sessionStopped=()=>finish(me);
+
+  if(window.MediaRecorder){
+    try{
+      me.mr=new MediaRecorder(stream);
+      me.mr.ondataavailable=e=>{if(e.data&&e.data.size)me.chunks.push(e.data);};
+      me.mr.onstop=()=>{
+        if(!me.chunks.length)return;
+        if(audioUrl)URL.revokeObjectURL(audioUrl);
+        audioUrl=URL.createObjectURL(new Blob(me.chunks,{type:me.mr.mimeType||'audio/webm'}));
+        const a=$('myAudio');a.src=audioUrl;a.hidden=false;
+      };
+      me.mr.start();
+    }catch(e){me.mr=null;}
+  }
+  $('recBtn').classList.add('live');$('recBtn').innerHTML='멈추기';$('recHint').textContent='듣고 있어요. 다 말하면 다시 누르세요.';
+  r.startContinuousRecognitionAsync(()=>{
+    if(S.sim&&!me.free)playSeg();
+    const words=g.t?wc(g.t):0;
+    const limit=g.s!=null?(g.e-g.s)/S.rate*1.6+5:(words?words*0.8+6:30);
+    me.timer=setTimeout(()=>{if(rec===me)stopRec();},Math.min(45,Math.max(8,limit))*1000);
+  },err=>{me.err=String(err);finish(me);});
+}
+function stopRec(){
+  const me=rec;if(!me||me.stopping)return;me.stopping=true;
+  clearTimeout(me.timer);stopPlay();
+  $('recBtn').classList.remove('live');$('recBtn').disabled=true;$('recBtn').innerHTML='분석 중';$('recHint').textContent='점수를 계산하고 있어요.';
+  try{me.r.stopContinuousRecognitionAsync(()=>setTimeout(()=>finish(me),1500),()=>finish(me));}catch(e){finish(me);}
+  setTimeout(()=>finish(me),6000);
+}
+function finish(me){
+  if(me.done)return;me.done=true;
+  clearTimeout(me.timer);
+  try{if(me.mr&&me.mr.state!=='inactive')me.mr.stop();}catch(e){}
+  setTimeout(()=>{try{me.stream.getTracks().forEach(t=>t.stop());}catch(e){}},200);
+  try{me.r.close();}catch(e){}
+  if(rec===me)rec=null;
+  stopPlay();
+  const b=$('recBtn');b.classList.remove('live');b.disabled=false;b.innerHTML='따라<br>말하기';
+  $('recHint').textContent='누르고 말한 뒤, 다시 눌러 멈추세요.';
+  if(me.err){
+    const d=String(me.err);
+    toast(/401|403|Authentication|subscription/i.test(d)?'Azure 키 또는 지역이 맞지 않아요. 설정을 확인하세요.':'분석에 실패했어요: '+d.slice(0,120));
+    return;
+  }
+  if(!me.results.length){toast('말소리를 인식하지 못했어요. 조금 더 크게, 마이크 가까이에서 말해보세요.');return;}
+  const res=scoreIt(me.ref,me.results);
+  const v=S.videos.find(x=>x.id===me.vidKey);
+  if(v&&!me.free){v.best=v.best||{};v.best[me.idx]=Math.max(v.best[me.idx]||0,Math.round(res.pron));save();}
+  if(v===cv()&&(me.free||me.idx===S.seg)){lastResult=res;renderPractice();$('resultCard').scrollIntoView({behavior:'smooth',block:'nearest'});}
+}
+const norm=w=>String(w).toLowerCase().replace(/[^a-z0-9']/g,'');
+const mean=a=>{a=a.filter(x=>typeof x==='number'&&!isNaN(x));return a.length?a.reduce((p,c)=>p+c,0)/a.length:null;};
+function scoreIt(ref,results){
+  const spoken=results.flatMap(r=>r.words).filter(w=>w.err!=='Omission'&&norm(w.w));
+  let tokens,extra=[];
+  if(ref){
+    const raw=ref.split(/\s+/).filter(Boolean),rn=raw.map(norm),sn=spoken.map(w=>norm(w.w));
+    const n=rn.length,m=sn.length,dp=Array.from({length:n+1},()=>new Uint16Array(m+1));
+    for(let i=n-1;i>=0;i--)for(let j=m-1;j>=0;j--)dp[i][j]=rn[i]&&rn[i]===sn[j]?dp[i+1][j+1]+1:Math.max(dp[i+1][j],dp[i][j+1]);
+    tokens=raw.map(t=>({t,a:null,miss:!!norm(t)}));
+    let i=0,j=0;
+    while(i<n&&j<m){
+      if(rn[i]&&rn[i]===sn[j]){tokens[i].a=spoken[j].a;tokens[i].miss=false;i++;j++;}
+      else if(dp[i+1][j]>=dp[i][j+1])i++;
+      else{extra.push(spoken[j].w);j++;}
+    }
+    for(;j<m;j++)extra.push(spoken[j].w);
+  }else tokens=spoken.map(w=>({t:w.w,a:w.a,miss:false}));
+  const countable=tokens.filter(t=>norm(t.t)),hit=countable.filter(t=>!t.miss);
+  const one=results.length===1?results[0]:null;
+  const acc=one?one.acc:(mean(hit.map(t=>t.a))||0);
+  const flu=one?one.flu:(mean(results.map(r=>r.flu))||0);
+  const pros=one?one.pros:mean(results.map(r=>r.pros));
+  const comp=ref?(one?one.comp:(countable.length?hit.length/countable.length*100:0)):null;
+  let pron=one?one.pron:null;
+  if(pron==null||isNaN(pron)){const parts=[acc,flu,comp,pros].filter(x=>typeof x==='number'&&!isNaN(x));pron=mean(parts)||0;}
+  return{tokens,extra,acc,flu,comp,pros:(typeof pros==='number'&&!isNaN(pros))?pros:null,pron};
+}
+
+/* ---------- rendering ---------- */
+const cls=a=>a>=80?'g':a>=60?'m':'b';
+function chip(score){const c=document.createElement('span');c.className='chip '+cls(score);c.textContent=score;return c;}
+function renderHead(){
+  const v=cv();
+  $('vidTitle').textContent=v.title||'쉐도잉 연습장';
+  const done=Object.values(v.best||{});
+  $('vidSub').textContent=free()?'스크립트 없는 영상 · 자유 연습':
+    v.segs.length+'문장'+(done.length?' · '+done.length+'개 연습함 · 평균 '+Math.round(mean(done))+'점':'');
+}
+function renderPractice(){
+  clamp();renderHead();
+  const v=cv(),g=curSeg(),f=free();
+  $('segPos').textContent=f?'자유 연습':(S.seg+1)+' / '+v.segs.length;
+  const best=v.best&&v.best[S.seg];
+  $('segBest').textContent=!f&&best!=null?'최고 '+best+'점':'';
+  const sen=$('sentence');sen.textContent='';$('wordInfo').textContent='';
+  if(lastResult){
+    lastResult.tokens.forEach((t,i)=>{
+      if(i)sen.appendChild(document.createTextNode(' '));
+      if(!norm(t.t)){sen.appendChild(document.createTextNode(t.t));return;}
+      const sp=document.createElement('span');sp.className='w '+(t.miss?'x':cls(t.a));sp.textContent=t.t;
+      sp.onclick=()=>$('wordInfo').textContent=t.miss?'"'+t.t+'" 말하지 않았거나 인식되지 않았어요.':'"'+t.t+'" 정확도 '+Math.round(t.a)+'점';
+      sen.appendChild(sp);
+    });
+  }else sen.textContent=f?'영상을 듣고 들은 대로 따라 말해보세요.':g.t;
+  $('prevBtn').textContent=f?'5초 뒤로':'이전';
+  $('nextBtn').textContent=f?'5초 앞으로':'다음';
+  $('prevBtn').disabled=!f&&S.seg===0;
+  $('nextBtn').disabled=!f&&S.seg>=v.segs.length-1;
+  $('playBtn').textContent=playing?'정지':(f?'재생':'듣기');
+  $('rateBtn').textContent='속도 '+S.rate.toFixed(S.rate===1?1:2).replace(/0$/,'').replace(/\.$/,'.0');
+  $('loopBtn').classList.toggle('on',S.loop);$('loopBtn').hidden=f;
+  $('simBtn').classList.toggle('on',S.sim);$('simBtn').hidden=f;
+
+  const rc=$('resultCard');rc.hidden=!lastResult;
+  if(lastResult){
+    const r=lastResult;$('total').textContent=Math.round(r.pron);
+    const bars=$('bars');bars.textContent='';
+    [['정확도',r.acc],['유창성',r.flu],['완성도',r.comp],['억양',r.pros]].forEach(([k,val])=>{
+      if(val==null)return;
+      const a=document.createElement('span');a.textContent=k;
+      const b=document.createElement('div');b.className='bar';const i=document.createElement('i');i.style.width=Math.max(0,Math.min(100,val))+'%';b.appendChild(i);
+      const c=document.createElement('b');c.textContent=Math.round(val);
+      bars.append(a,b,c);
+    });
+    $('extra').textContent=r.extra.length?'스크립트에 없는 단어: '+r.extra.slice(0,12).join(', '):'';
+  }
+  $('segListWrap').hidden=f;
+  const list=$('segList');list.textContent='';
+  v.segs.forEach((s,i)=>{
+    const b=document.createElement('button');b.className='item'+(i===S.seg?' cur':'');
+    const n=document.createElement('span');n.className='n';n.textContent=i+1;
+    const t=document.createElement('span');t.className='t';t.lang='en';t.textContent=s.t;
+    b.append(n,t);
+    if(v.best&&v.best[i]!=null)b.appendChild(chip(v.best[i]));
+    b.onclick=()=>{goSeg(i);window.scrollTo({top:0,behavior:'smooth'});};
+    list.appendChild(b);
+  });
+}
+function renderLibrary(){
+  const list=$('vidList');list.textContent='';
+  S.videos.forEach((v,i)=>{
+    const row=document.createElement('div');row.className='row';row.style.flexWrap='nowrap';
+    const b=document.createElement('button');b.className='item'+(i===S.cur?' cur':'');b.style.flex='1 1 auto';b.style.minWidth='0';
+    const t=document.createElement('span');t.className='t';t.textContent=v.title||('영상 '+v.vid);
+    const c=document.createElement('span');c.className='sub';c.style.flex='0 0 auto';c.textContent=v.segs.length?v.segs.length+'문장':'자유';
+    b.append(t,c);
+    b.onclick=()=>{stopPlay();S.cur=i;S.seg=0;lastResult=null;save();openPractice();};
+    const d=document.createElement('button');d.className='del';d.textContent='삭제';d.style.flex='0 0 auto';
+    d.onclick=()=>{
+      if(d.dataset.sure!=='1'){d.dataset.sure='1';d.textContent='정말 삭제';setTimeout(()=>{d.dataset.sure='';d.textContent='삭제';},3000);return;}
+      S.videos.splice(i,1);if(S.cur>=i&&S.cur>0)S.cur--;S.seg=0;lastResult=null;
+      if(!S.videos.length){save();load();}
+      save();renderLibrary();
+    };
+    row.append(b,d);list.appendChild(row);
+  });
+}
+function openPractice(){show('practice');renderPractice();mountPlayer();}
+function setState(){$('setState').textContent=S.key&&S.region?'저장되어 있어요. 연습 화면에서 바로 녹음할 수 있습니다.':'아직 키가 없어요. Azure 포털에서 Speech 리소스를 만든 뒤 키와 지역을 넣어주세요.';}
+
+/* ---------- events ---------- */
+$('playBtn').onclick=playSeg;
+$('prevBtn').onclick=()=>step(-1);
+$('nextBtn').onclick=()=>step(1);
+$('rateBtn').onclick=()=>{S.rate=S.rate===1?0.75:S.rate===0.75?0.5:1;save();stopPlay();renderPractice();};
+$('loopBtn').onclick=()=>{S.loop=!S.loop;save();renderPractice();};
+$('simBtn').onclick=()=>{S.sim=!S.sim;save();renderPractice();if(S.sim)toast('녹음과 동시에 원음이 나옵니다. 이어폰을 꼭 쓰세요.');};
+$('recBtn').onclick=()=>{rec?stopRec():startRec();};
+$('setForm').onsubmit=e=>{e.preventDefault();S.key=$('sKey').value.trim();S.region=$('sRegion').value.trim().toLowerCase();save();setState();toast('저장했어요.');};
+$('addForm').onsubmit=e=>{
+  e.preventDefault();
+  const url=$('fUrl').value.trim(),vid=ytId(url),text=$('fText').value;
+  if(url&&!vid){toast('유튜브 주소를 알아보지 못했어요. 주소를 다시 확인하세요.');return;}
+  const segs=parseTranscript(text,Number($('fLen').value)||14);
+  if(!vid&&!segs.length){toast('유튜브 주소나 영어 문장 중 하나는 넣어주세요.');return;}
+  const timed=segs.length&&segs[0].s!=null;
+  S.videos.unshift({id:'v'+Date.now(),vid:timed||!segs.length?vid:'',title:$('fTitle').value.trim(),segs,best:{}});
+  if(vid&&segs.length&&!timed)toast('시간 정보가 없어 영상과 연결하지 못했어요. 기기 음성으로 읽어드립니다.');
+  S.cur=0;S.seg=0;lastResult=null;save();
+  $('fUrl').value='';$('fTitle').value='';$('fText').value='';
+  openPractice();
+};
+document.addEventListener('visibilitychange',()=>{if(document.hidden){if(rec)stopRec();else stopPlay();}});
+
+load();renderPractice();mountPlayer();
+</script>
+</body>
+</html>
